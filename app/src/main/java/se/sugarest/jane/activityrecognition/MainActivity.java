@@ -11,11 +11,15 @@ import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.DetectedActivity;
 
@@ -23,7 +27,7 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity
         implements GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener {
+        GoogleApiClient.OnConnectionFailedListener, ResultCallback<Status> {
 
     private final static String TAG_MAINACTIVITY = MainActivity.class.getSimpleName();
 
@@ -89,18 +93,11 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
-     * Once the GoogleApiClient instance has connected, onConnected() is called. When this happens,
-     * you need to create a PendingIntent that goes to the IntentService you created earlier, and
-     * pass it to the ActivityRecognitionApi.
-     * You also need to set an interval for how often the API should check the user's activity.
-     * For this sample application, we use a value of 3000, or three seconds, though in an actual
-     * application you may want to  check less frequently to conserve power.
+     * Once the GoogleApiClient instance has connected, onConnected() is called.
      */
     @Override
     public void onConnected(@Nullable Bundle bundle) {
-        Intent intent = new Intent(this, DetectedActivitiesIntentService.class);
-        PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(mGoogleApiClient, 3000, pendingIntent);
+        Toast.makeText(this, "GoogleApiClient is connected.", Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -116,6 +113,56 @@ public class MainActivity extends AppCompatActivity
         // Refer to the javadoc for ConnectionResult to see what error codes might be returned in
         // onConnectionFailed.
         Log.i(TAG_MAINACTIVITY, "Connection failed: ConnectionResult.getErrorCode() = " + connectionResult.getErrorCode());
+    }
+
+    public void requestActivityUpdatesButtonHandler(View view) {
+        if (!mGoogleApiClient.isConnected()) {
+            Toast.makeText(this, getString(R.string.not_connected), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(
+                mGoogleApiClient,
+                Constants.DETECTION_INTERVAL_IN_MILLISECONDS,
+                getActivityDetectionPendingIntent()
+        ).setResultCallback(this);
+        mRequestUpdatesButton.setEnabled(false);
+        mRemoveUpdatesButton.setEnabled(true);
+    }
+
+    public void removeActivityUpdatesButtonHandler(View view) {
+        if (!mGoogleApiClient.isConnected()) {
+            Toast.makeText(this, getString(R.string.not_connected), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        // Remove all activity updates for PendingIntent that was used to request activity update.
+        ActivityRecognition.ActivityRecognitionApi.removeActivityUpdates(
+                mGoogleApiClient,
+                getActivityDetectionPendingIntent()
+        ).setResultCallback(this);
+        mRequestUpdatesButton.setEnabled(true);
+        mRemoveUpdatesButton.setEnabled(false);
+    }
+
+    /**
+     * Create a PendingIntent that goes to the IntentService that created earlier, and
+     * pass it to the ActivityRecognitionApi.
+     * You also need to set an interval for how often the API should check the user's activity.
+     * For this sample application, we use a value of 3000, or three seconds, though in an actual
+     * application you may want to  check less frequently to conserve power.
+     */
+    public PendingIntent getActivityDetectionPendingIntent() {
+        Intent intent = new Intent(this, DetectedActivitiesIntentService.class);
+        PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        return pendingIntent;
+    }
+
+    @Override
+    public void onResult(@NonNull Status status) {
+        if (status.isSuccess()) {
+            Log.e(TAG_MAINACTIVITY, "Successfully added activity detection.");
+        } else {
+            Log.e(TAG_MAINACTIVITY, "Error adding or removing activity detection: " + status.getStatusMessage());
+        }
     }
 
     /**

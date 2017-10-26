@@ -15,4 +15,6 @@ public class Constants {
 
     public static final String ACTIVITY_EXTRA = PACKAGE_NAME + ".ACTIVITY_EXTRA";
 
+    public static final long DETECTION_INTERVAL_IN_MILLISECONDS = 3000;
+
 }
