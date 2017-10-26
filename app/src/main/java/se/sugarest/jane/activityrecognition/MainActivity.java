@@ -30,6 +30,7 @@ public class MainActivity extends AppCompatActivity
     private Button mRemoveUpdatesButton;
 
     protected GoogleApiClient mGoogleApiClient;
+    protected ActivityDetectionBroadcastReceiver mBroadcastReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,6 +40,8 @@ public class MainActivity extends AppCompatActivity
         mDetectedActivitesTextView = (TextView) findViewById(R.id.detectedActivities);
         mRequestUpdatesButton = (Button) findViewById(R.id.request_activity_updates_button);
         mRemoveUpdatesButton = (Button) findViewById(R.id.remove_activity_updates_button);
+
+        mBroadcastReceiver = new ActivityDetectionBroadcastReceiver();
 
         buildGoogleApiClinet();
 
